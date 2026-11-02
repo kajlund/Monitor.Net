@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DreamQuest Monitor</title>
+  </head>
+
+  <body>
+    <h1>DreamQuest Monitor</h1>
+    <button id="refresh" type="button">Refresh</button>
+    <p id="message" role="status"></p>
+    <ul id="applications"></ul>
+
+    <script type="module">
+      const button = document.querySelector("#refresh");
+      const message = document.querySelector("#message");
+      const list = document.querySelector("#applications");
+
+      async function refresh() {
+        button.disabled = true;
+        message.textContent = "Checking applications…";
+
+        try {
+          const response = await fetch("/api/applications");
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          const applications = await response.json();
+          list.replaceChildren();
+
+          for (const application of applications) {
+            const item = document.createElement("li");
+            item.textContent =
+              `${application.name}: ${application.status} (${application.responseTimeMs} ms)`;
+            list.append(item);
+          }
+
+          message.textContent = `Updated at ${new Date().toLocaleTimeString()}`;
+        } catch (error) {
+          message.textContent = "Could not refresh application statuses.";
+          console.error(error);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      button.addEventListener("click", refresh);
+
+      refresh();
+    </script>
+  </body>
+
+</html>
