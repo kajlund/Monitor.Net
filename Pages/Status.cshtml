@@ -1,0 +1,126 @@
+@page "/status"
+@model StatusModel
+@{
+  Layout = null;
+  var overallClass = Model.AllHealthy ? "ok" : "error";
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DreamQuest · Server status</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body class="status-page">
+
+  <main class="status-shell">
+    <header class="status-header">
+      <div>
+        <a class="eyebrow" href="/">DreamQuest</a>
+        <h1>Server status</h1>
+      </div>
+
+      <div class="status-header-right">
+        <nav class="page-nav" aria-label="Main navigation">
+          <a href="/" class="nav-link">Home</a>
+          <a href="/status" class="nav-link active"
+              aria-current="page">Status</a>
+        </nav>
+
+        <a href="/status" class="nav-link">Refresh checks</a>
+      </div>
+    </header>
+
+    <section class="diagnosis" aria-label="Overall application health">
+      <div class="diagnosis-heading">
+        <span class="diagnosis-icon @overallClass" aria-hidden="true">
+            @(Model.AllHealthy ? "✓" : "!")
+        </span>
+
+        <div>
+          <span class="diagnosis-state @($"{overallClass}-text")">
+            @(Model.AllHealthy ? "All applications healthy" : "Needs attention")
+          </span>
+
+          <h2>
+            @if (Model.AllHealthy)
+            {
+              <text>All configured applications are responding normally</text>
+            }
+            else
+            {
+              <text>@Model.UnavailableCount application(s) need attention</text>
+            }
+          </h2>
+        </div>
+      </div>
+
+      <p class="diagnosis-copy">
+          @(Model.AllHealthy
+            ? "No application issues were detected."
+            : "Review the application results below for details.")
+      </p>
+
+      @if (!Model.AllHealthy)
+      {
+        <div class="affected" aria-label="Affected applications">
+          <span class="affected-label">Affected applications</span>
+
+          <div class="affected-list">
+            @foreach (var application in Model.AffectedApplications)
+            {
+              <span class="affected-pill error-soft">
+                <span class="status-dot" aria-hidden="true"></span>
+                @application.Name
+              </span>
+            }
+          </div>
+        </div>
+      } 
+    </section>
+
+    <section class="status-section">
+      <h2>Applications</h2>
+
+      <div class="app-launcher">
+        @foreach (var application in Model.ApplicationStatuses)
+        {
+          var definition = application.Definition;
+          var check = application.Check;
+          var statusClass = check.Status == "Online" ? "ok" : "error";
+
+          <a class="app-item"
+            href="@definition.PublicUrl"
+            target="_blank"
+            rel="noopener noreferrer">
+            <span class="app-icon" aria-hidden="true">
+              <img class="app-icon-image" src="@definition.IconUrl" alt="">
+            </span>
+
+            <span class="app-meta">
+              <strong>@definition.Name</strong>
+              <span>@definition.Description</span>
+            </span>
+
+            <span class="app-actions">
+              <span class="status @statusClass">
+                @check.Status
+              </span>
+              <span class="inline-status">
+                @check.ResponseTimeMs ms
+              </span>
+            </span>
+          </a>
+        }
+      </div>
+    </section>
+
+  </main>
+
+</body>
+
+</html>
