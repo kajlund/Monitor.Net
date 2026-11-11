@@ -1,4 +1,5 @@
 public record DockerStatus(
-    string Status,
-    string Message,
-    ContainerStatus[] Containers);
+  string Status,
+  string Message,
+  ContainerStatus[] Containers
+);

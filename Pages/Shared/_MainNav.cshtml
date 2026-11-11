@@ -1,0 +1,15 @@
+@model string
+
+<nav class="page-nav" aria-label="Main navigation">
+    <a href="/"
+       class="nav-link @(Model == "Home" ? "active" : "")"
+       aria-current="@(Model == "Home" ? "page" : null)">
+        Home
+    </a>
+
+    <a href="/status"
+       class="nav-link @(Model == "Status" ? "active" : "")"
+       aria-current="@(Model == "Status" ? "page" : null)">
+        Status
+    </a>
+</nav>
