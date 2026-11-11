@@ -5,6 +5,11 @@ builder.Services.AddHttpClient<ApplicationChecker>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(5);
 });
+builder.Services.AddSingleton<SystemVitalsReader>();
+builder.Services.AddSingleton<StorageChecker>();
+builder.Services.AddSingleton<ServiceChecker>();
+builder.Services.AddSingleton<DockerChecker>();
+builder.Services.AddSingleton<BackupChecker>();
 
 var app = builder.Build();
 

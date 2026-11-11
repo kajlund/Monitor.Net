@@ -1,8 +1,19 @@
 @page "/status"
 @model StatusModel
 @{
-  Layout = null;
-  var overallClass = Model.AllHealthy ? "ok" : "error";
+    Layout = null;
+
+    var overallClass = Model.OverallStatus;
+
+    var summaryIcon = overallClass switch
+    {
+        "ok" => "ph-check-circle",
+        "warn" => "ph-warning",
+        "error" => "ph-warning-circle",
+        _ => "ph-question"
+    };
+
+    var affected = Model.AffectedComponents;
 }
 
 <!doctype html>
@@ -13,6 +24,7 @@
   <title>DreamQuest · Server status</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/vendor/phosphor/regular/style.css">
 </head>
 
 <body class="status-page">
@@ -35,52 +47,139 @@
       </div>
     </header>
 
-    <section class="diagnosis" aria-label="Overall application health">
-      <div class="diagnosis-heading">
-        <span class="diagnosis-icon @overallClass" aria-hidden="true">
-            @(Model.AllHealthy ? "✓" : "!")
-        </span>
+    <div class="overview">
 
-        <div>
-          <span class="diagnosis-state @($"{overallClass}-text")">
-            @(Model.AllHealthy ? "All applications healthy" : "Needs attention")
+      <section class="diagnosis" aria-label="Overall system health">
+        <div class="diagnosis-heading">
+          <span class="diagnosis-icon @overallClass" aria-hidden="true">
+            <i class="ph @summaryIcon"></i>
           </span>
 
-          <h2>
-            @if (Model.AllHealthy)
-            {
-              <text>All configured applications are responding normally</text>
-            }
-            else
-            {
-              <text>@Model.UnavailableCount application(s) need attention</text>
-            }
-          </h2>
-        </div>
-      </div>
+          <div>
+            <span class="diagnosis-state @($"{overallClass}-text")">
+                @Model.SummaryTitle
+            </span>
 
-      <p class="diagnosis-copy">
-          @(Model.AllHealthy
-            ? "No application issues were detected."
-            : "Review the application results below for details.")
-      </p>
-
-      @if (!Model.AllHealthy)
-      {
-        <div class="affected" aria-label="Affected applications">
-          <span class="affected-label">Affected applications</span>
-
-          <div class="affected-list">
-            @foreach (var application in Model.AffectedApplications)
-            {
-              <span class="affected-pill error-soft">
-                <span class="status-dot" aria-hidden="true"></span>
-                @application.Name
-              </span>
-            }
+            <h2>@Model.SummaryDetail</h2>
           </div>
         </div>
-      } 
+
+        <p class="diagnosis-copy">
+          @Model.SummaryCopy
+        </p>
+
+        @if (Model.UnknownCount > 0)
+        {
+          <p class="diagnosis-copy">
+              @Model.UnknownCount check(s) unavailable on this platform.
+          </p>
+        }
+
+        @if (affected.Length > 0)
+        {
+          <div class="affected" aria-label="Affected components">
+            <span class="affected-label">Affected components</span>
+
+            <div class="affected-list">
+                @foreach (var component in affected.Take(5))
+                {
+                    <span class="affected-pill @($"{component.Status}-soft")">
+                        <span class="status-dot" aria-hidden="true"></span>
+                        @component.Label
+                    </span>
+                }
+
+                @if (affected.Length > 5)
+                {
+                    <span class="affected-pill more">
+                        +@(affected.Length - 5) more
+                    </span>
+                }
+            </div>
+          </div>
+        }
+      </section>
+
+      <section class="vitals">
+        <h2>System vitals · @Model.Vitals.MachineName</h2>
+
+        <div class="vital-row">
+          <i class="ph ph-clock" aria-hidden="true"></i>
+          <span>Uptime</span>
+          <strong>@Model.Vitals.Uptime</strong>
+        </div>
+
+        <div class="vital-row">
+          <i class="ph ph-cpu" aria-hidden="true"></i>
+          <span>CPU Load
+            <small>@Model.Vitals.LoadDetail</small>
+          </span>
+          <strong>@Model.Vitals.Load</strong>
+        </div>
+
+        <div class="vital-row">
+          <i class="ph ph-memory" aria-hidden="true"></i>
+          <span>Memory</span>
+          <strong>@Model.Vitals.Memory</strong>
+        </div>
+
+        <div class="vital-row">
+          <i class="ph ph-thermometer-simple" aria-hidden="true"></i>
+          <span>Temperature</span>
+          <strong>@Model.Vitals.Temperature</strong>
+        </div>
+      </section>
+    </div>
+
+    <section class="status-section">
+    <h2>Storage</h2>
+
+    <div class="status-list-two">
+        @foreach (var storage in Model.Storage)
+        {
+            var statusClass = storage.Status switch
+            {
+                "ok" => "ok-text",
+                "warn" => "warn-text",
+                "error" => "error-text",
+                _ => ""
+            };
+
+            <div class="status-row">
+                <strong>@storage.Label</strong>
+
+                <span class="inline-status @statusClass">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    @storage.Message
+                </span>
+            </div>
+        }
+      </div>
+    </section>
+
+    <section class="status-section">
+      <h2>Services</h2>
+
+      <div class="service-grid">
+        @foreach (var service in Model.Services)
+        {
+          var statusClass = service.Status switch
+          {
+              "ok" => "ok-text",
+              "error" => "error-text",
+              _ => ""
+          };
+
+          <div class="service-row">
+                <strong>@service.Label</strong>
+
+            <span class="inline-status @statusClass">
+              <span class="status-dot" aria-hidden="true"></span>
+              @service.Message
+            </span>
+          </div>
+        }
+      </div>
     </section>
 
     <section class="status-section">
@@ -119,6 +218,62 @@
       </div>
     </section>
 
+
+    <section class="status-section compact-section">
+    <h2>Docker</h2>
+
+    @if (Model.Docker.Containers.Length > 0)
+    {
+        <div class="status-list">
+            @foreach (var container in Model.Docker.Containers)
+            {
+                var statusClass = container.Status == "ok"
+                    ? "ok-text"
+                    : "error-text";
+
+                <div class="status-row">
+                    <strong>@container.Name</strong>
+
+                    <span class="inline-status @statusClass">
+                        <span class="status-dot" aria-hidden="true"></span>
+                        @container.State
+                    </span>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="empty-state">
+            @(Model.Docker.Status == "ok"
+                ? "No running containers to display."
+                : Model.Docker.Message)
+        </p>
+    }
+</section>
+
+    <section class="status-section compact-section backup-section">
+    <h2>Backup</h2>
+
+    @{
+        var backupClass = Model.Backup.Status switch
+        {
+            "ok" => "ok-text",
+            "warn" => "warn-text",
+            "error" => "error-text",
+            _ => ""
+        };
+    }
+
+    <div class="status-row">
+        <strong>Latest backup</strong>
+
+        <span class="inline-status @backupClass">
+            <span class="status-dot" aria-hidden="true"></span>
+            @Model.Backup.Message
+        </span>
+    </div>
+</section>
   </main>
 
 </body>

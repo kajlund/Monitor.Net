@@ -17,9 +17,13 @@ public class ApplicationChecker(HttpClient client)
 
       return new MonitoredApplication(name, status, stopwatch.ElapsedMilliseconds);
     }
-    catch (HttpRequestException)
+    catch (HttpRequestException exception)
     {
-      return new MonitoredApplication(name, "Unavailable", stopwatch.ElapsedMilliseconds);
+      Console.Error.WriteLine(
+        $"Health check failed for {name} ({healthUrl}): {exception}");
+
+      return new MonitoredApplication(
+        name, "Unavailable", stopwatch.ElapsedMilliseconds);
     }
     catch (OperationCanceledException)
     {
