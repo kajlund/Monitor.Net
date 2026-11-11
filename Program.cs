@@ -10,6 +10,11 @@ builder.Services.AddSingleton<StorageChecker>();
 builder.Services.AddSingleton<ServiceChecker>();
 builder.Services.AddSingleton<DockerChecker>();
 builder.Services.AddSingleton<BackupChecker>();
+builder.Services.AddHttpClient("HomeWidgets", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(3);
+});
+builder.Services.AddSingleton<HomeWidgets>();
 
 var app = builder.Build();
 

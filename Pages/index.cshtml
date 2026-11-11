@@ -12,6 +12,7 @@
     <title>DreamQuest</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/vendor/phosphor/regular/style.css">
 </head>
 <body class="home-page">
   <main class="home-shell">
@@ -62,6 +63,54 @@
                 }
             </div>
       </section>
+
+      <section class="home-section">
+        <h2 class="home-section-title">Today</h2>
+
+        <div class="widgets">
+          <article class="widget-card">
+            <div class="widget-header">
+                <i class="ph ph-quotes" aria-hidden="true"></i>
+                <span class="widget-label">Quote of the day</span>
+            </div>
+
+            @if (Model.Quote is { } quote)
+            {
+                <blockquote class="quote-content">@quote.Content</blockquote>
+
+                @if (!string.IsNullOrWhiteSpace(quote.Author))
+                {
+                    <cite class="quote-author">— @quote.Author</cite>
+                }
+            }
+            else
+            {
+                <p class="weather-desc">Quote unavailable.</p>
+            }
+          </article>
+
+          <article class="widget-card">
+            <div class="widget-header">
+                <i class="ph @Model.WeatherCondition.Icon" aria-hidden="true"></i>
+                <span class="widget-label">Weather · Pietarsaari</span>
+            </div>
+
+            @if (Model.Weather?.Temperature is double temperature)
+            {
+                <div class="weather-info">
+                    <span class="weather-temp">@(temperature.ToString("F0")) °C</span>
+                    <span class="weather-desc">@Model.WeatherCondition.Description</span>
+                </div>
+            }
+            else
+            {
+                <p class="weather-desc">Current weather unavailable.</p>
+            }
+
+            <a class="weather-desc" href="https://open-meteo.com/">Weather data by Open-Meteo</a>
+          </article>
+      </div>
+    </section>
   </main>
 </body>
 </html>
