@@ -1,5 +1,7 @@
 using System.Diagnostics;
 
+namespace Monitor.Features.Applications;
+
 public class ApplicationChecker(HttpClient client)
 {
   public async Task<MonitoredApplication> CheckAsync(

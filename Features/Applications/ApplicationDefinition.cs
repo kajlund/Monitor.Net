@@ -1,3 +1,5 @@
+namespace Monitor.Features.Applications;
+
 public class ApplicationDefinition
 {
   public string Name { get; set; } = "";

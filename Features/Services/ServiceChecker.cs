@@ -1,5 +1,7 @@
 using System.Diagnostics;
 
+namespace Monitor.Features.Services;
+
 public class ServiceChecker
 {
   public async Task<ServiceStatus[]> CheckAsync()
@@ -25,8 +27,8 @@ public class ServiceChecker
   }
 
   private static Task<ServiceStatus> CheckProcessAsync(
-      string label,
-      string processName)
+    string label,
+    string processName)
   {
     return InspectAsync(
         label,
@@ -36,10 +38,10 @@ public class ServiceChecker
   }
 
   private static async Task<ServiceStatus> InspectAsync(
-      string label,
-      string command,
-      string[] arguments,
-      bool isProcessCheck)
+    string label,
+    string command,
+    string[] arguments,
+    bool isProcessCheck)
   {
     if (!OperatingSystem.IsLinux())
     {
@@ -65,7 +67,7 @@ public class ServiceChecker
     {
       using var process = new Process { StartInfo = startInfo };
       using var timeout = new CancellationTokenSource(
-          TimeSpan.FromSeconds(5));
+        TimeSpan.FromSeconds(5));
 
       process.Start();
 
@@ -105,9 +107,9 @@ public class ServiceChecker
       var active = process.ExitCode == 0 && text == "active";
 
       return new ServiceStatus(
-          label,
-          active ? "ok" : "error",
-          string.IsNullOrWhiteSpace(text) ? "Check failed" : text);
+        label,
+        active ? "ok" : "error",
+        string.IsNullOrWhiteSpace(text) ? "Check failed" : text);
     }
     catch (System.ComponentModel.Win32Exception)
     {

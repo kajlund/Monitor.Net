@@ -1,5 +1,7 @@
 using System.Diagnostics;
 
+namespace Monitor.Features.Docker;
+
 public class DockerChecker
 {
   public async Task<DockerStatus> CheckAsync()

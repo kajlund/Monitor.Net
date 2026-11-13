@@ -1,5 +1,7 @@
 using System.Globalization;
 
+namespace Monitor.Features.SystemVitals;
+
 public class SystemVitalsReader
 {
   public SystemVitals Read()
@@ -35,10 +37,10 @@ public class SystemVitalsReader
 
       if (parts.Length == 0 ||
           !double.TryParse(
-              parts[0],
-              NumberStyles.Float,
-              CultureInfo.InvariantCulture,
-              out var load) ||
+            parts[0],
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var load) ||
           !double.IsFinite(load) ||
           load < 0)
       {
@@ -72,10 +74,10 @@ public class SystemVitalsReader
           "/sys/class/thermal/thermal_zone0/temp");
 
       if (!double.TryParse(
-          raw.Trim(),
-          NumberStyles.Float,
-          CultureInfo.InvariantCulture,
-          out var millidegrees))
+        raw.Trim(),
+        NumberStyles.Float,
+        CultureInfo.InvariantCulture,
+        out var millidegrees))
       {
         return "n/a";
       }
@@ -106,25 +108,25 @@ public class SystemVitalsReader
       foreach (var line in File.ReadLines("/proc/meminfo"))
       {
         var parts = line.Split(
-            (char[]?)null,
-            StringSplitOptions.RemoveEmptyEntries);
+          (char[]?)null,
+          StringSplitOptions.RemoveEmptyEntries);
 
         if (parts.Length >= 2 &&
             long.TryParse(
-                parts[1],
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out var value))
+              parts[1],
+              NumberStyles.Integer,
+              CultureInfo.InvariantCulture,
+              out var value))
         {
           values[parts[0].TrimEnd(':')] = value;
         }
       }
 
       if (!values.TryGetValue("MemTotal", out var total) ||
-          !values.TryGetValue("MemAvailable", out var available) ||
-          total <= 0 ||
-          available < 0 ||
-          available > total)
+        !values.TryGetValue("MemAvailable", out var available) ||
+        total <= 0 ||
+        available < 0 ||
+        available > total)
       {
         return "n/a";
       }

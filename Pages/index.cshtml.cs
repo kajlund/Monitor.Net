@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Monitor.Features.Applications;
+using Monitor.Features.Widgets;
 
 public class IndexModel(
     IConfiguration configuration,

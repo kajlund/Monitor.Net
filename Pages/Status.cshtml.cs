@@ -1,4 +1,11 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Monitor.Features.Applications;
+using Monitor.Features.Backups;
+using Monitor.Features.Docker;
+using Monitor.Features.Services;
+using Monitor.Features.Storage;
+using Monitor.Features.SystemVitals;
+using Monitor.Models;
 
 public class StatusModel(
     IConfiguration configuration,
@@ -20,26 +27,26 @@ public class StatusModel(
   public ServiceStatus[] Services { get; private set; } = [];
 
   public DockerStatus Docker { get; private set; } =
-      new("unknown", "Not checked", []);
+    new("unknown", "Not checked", []);
 
   public BackupStatus Backup { get; private set; } =
-      new("unknown", "Not checked");
+    new("unknown", "Not checked");
 
   public ComponentStatus[] Components { get; private set; } = [];
 
   public ComponentStatus[] AffectedComponents =>
-      Components
-          .Where(component =>
-              component.Status is "error" or "warn")
-          .ToArray();
+    Components
+      .Where(component =>
+          component.Status is "error" or "warn")
+      .ToArray();
 
   public int UnknownCount =>
-      Components.Count(component => component.Status == "unknown");
+    Components.Count(component => component.Status == "unknown");
 
   public string OverallStatus =>
-      Components.Any(component => component.Status == "error") ? "error" :
-      Components.Any(component => component.Status == "warn") ? "warn" :
-      UnknownCount > 0 || Components.Length == 0 ? "unknown" :
+    Components.Any(component => component.Status == "error") ? "error" :
+    Components.Any(component => component.Status == "warn") ? "warn" :
+    UnknownCount > 0 || Components.Length == 0 ? "unknown" :
       "ok";
 
   public string SummaryTitle => OverallStatus switch
@@ -58,13 +65,13 @@ public class StatusModel(
       if (count > 0)
       {
         return count == 1
-            ? "1 component needs attention"
-            : $"{count} components need attention";
+          ? "1 component needs attention"
+          : $"{count} components need attention";
       }
 
       return OverallStatus == "ok"
-          ? "All monitored components are healthy"
-          : "Some checks could not run";
+        ? "All monitored components are healthy"
+        : "Some checks could not run";
     }
   }
 
@@ -85,22 +92,22 @@ public class StatusModel(
     var dockerTask = dockerChecker.CheckAsync();
 
     var definitions = configuration
-        .GetSection("Applications")
-        .Get<ApplicationDefinition[]>()
-        ?? [];
+      .GetSection("Applications")
+      .Get<ApplicationDefinition[]>()
+      ?? [];
 
     var checks = definitions.Select(application =>
-        checker.CheckAsync(application.Name, application.HealthUrl));
+      checker.CheckAsync(application.Name, application.HealthUrl));
 
     var applicationsTask = Task.WhenAll(checks);
 
     Backup = backupChecker.Check();
 
     await Task.WhenAll(
-        storageTask,
-        servicesTask,
-        dockerTask,
-        applicationsTask);
+      storageTask,
+      servicesTask,
+      dockerTask,
+      applicationsTask);
 
     Storage = await storageTask;
     Services = await servicesTask;
@@ -108,34 +115,34 @@ public class StatusModel(
     Applications = await applicationsTask;
 
     ApplicationStatuses = definitions
-        .Zip(Applications, (definition, check) =>
-            new ApplicationStatus(definition, check))
-        .ToArray();
+      .Zip(Applications, (definition, check) =>
+        new ApplicationStatus(definition, check))
+      .ToArray();
 
     var components = new List<ComponentStatus>();
 
     components.AddRange(Applications.Select(application =>
-        new ComponentStatus(
-            application.Name,
-            application.Status == "Online" ? "ok" : "error")));
+      new ComponentStatus(
+        application.Name,
+        application.Status == "Online" ? "ok" : "error")));
 
     components.AddRange(Storage.Select(storage =>
-        new ComponentStatus(storage.Label, storage.Status)));
+      new ComponentStatus(storage.Label, storage.Status)));
 
     components.AddRange(Services.Select(service =>
-        new ComponentStatus(service.Label, service.Status)));
+      new ComponentStatus(service.Label, service.Status)));
 
     if (Docker.Status != "ok" &&
-        !Docker.Containers.Any(container => container.Status == "error"))
+      !Docker.Containers.Any(container => container.Status == "error"))
     {
       components.Add(new ComponentStatus(
-          "Docker container checks", Docker.Status));
+        "Docker container checks", Docker.Status));
     }
 
     components.AddRange(Docker.Containers.Select(container =>
-        new ComponentStatus(
-            $"Container: {container.Name}",
-            container.Status)));
+      new ComponentStatus(
+        $"Container: {container.Name}",
+        container.Status)));
 
     components.Add(new ComponentStatus("Backup", Backup.Status));
 

@@ -1,3 +1,5 @@
+namespace Monitor.Features.Backups;
+
 public class BackupChecker
 {
   public BackupStatus Check()

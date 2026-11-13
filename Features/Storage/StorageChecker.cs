@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Globalization;
 
+namespace Monitor.Features.Storage;
+
 public class StorageChecker
 {
   public async Task<StorageStatus[]> CheckAsync()

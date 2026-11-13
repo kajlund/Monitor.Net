@@ -1,3 +1,11 @@
+using Monitor.Features.Applications;
+using Monitor.Features.Backups;
+using Monitor.Features.Docker;
+using Monitor.Features.Services;
+using Monitor.Features.Storage;
+using Monitor.Features.SystemVitals;
+using Monitor.Features.Widgets;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
@@ -26,7 +34,7 @@ var applications = builder.Configuration.GetSection("Applications").Get<Applicat
 app.MapGet("/api/applications", async (ApplicationChecker checker) =>
 {
   var checks = applications.Select(application =>
-      checker.CheckAsync(application.Name, application.HealthUrl));
+    checker.CheckAsync(application.Name, application.HealthUrl));
 
   return await Task.WhenAll(checks);
 });
