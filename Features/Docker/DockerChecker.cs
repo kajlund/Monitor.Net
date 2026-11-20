@@ -13,15 +13,15 @@ public class DockerChecker
 
     var startInfo = new ProcessStartInfo
     {
-      FileName = "/usr/bin/docker",
+      FileName = "/usr/bin/sudo",
       UseShellExecute = false,
       RedirectStandardOutput = true,
       RedirectStandardError = true
     };
 
-    startInfo.ArgumentList.Add("ps");
-    startInfo.ArgumentList.Add("--format");
-    startInfo.ArgumentList.Add("{{.Names}}|{{.Status}}");
+    startInfo.ArgumentList.Add("-n");
+    startInfo.ArgumentList.Add(
+      "/usr/local/sbin/dreamquest-docker-status.sh");
 
     try
     {

@@ -1,18 +1,21 @@
 using System.Diagnostics;
 using System.Globalization;
+using Microsoft.Extensions.Options;
 
 namespace Monitor.Features.Storage;
 
-public class StorageChecker
+public class StorageChecker(IOptions<StorageOptions> options)
 {
+
+  private readonly StorageOptions _options = options.Value;
   public async Task<StorageStatus[]> CheckAsync()
   {
     return await Task.WhenAll(
-        InspectAsync("/srv/storage", "STORAGE"),
-        InspectAsync("/srv/backup", "DQ-BACKUP"));
+      _options.Mounts.Select(mount =>
+        InspectAsync(mount.Path, mount.Label)));
   }
 
-  private static async Task<StorageStatus> InspectAsync(
+  private async Task<StorageStatus> InspectAsync(
       string path,
       string label)
   {
@@ -76,9 +79,9 @@ public class StorageChecker
             label, path, "error", "Invalid disk usage values");
       }
 
-      var status = percent >= 90 ? "error"
-          : percent >= 80 ? "warn"
-          : "ok";
+      var status = percent >= _options.ErrorPercent ? "error"
+    : percent >= _options.WarningPercent ? "warn"
+    : "ok";
 
       var unitSize = total >= Math.Pow(1024, 4)
         ? Math.Pow(1024, 4)
@@ -113,9 +116,9 @@ public class StorageChecker
         out value);
   }
 
-  private static async Task<(int ExitCode, string Output)> RunAsync(
-      string command,
-      params string[] arguments)
+  private async Task<(int ExitCode, string Output)> RunAsync(
+    string command,
+    params string[] arguments)
   {
     var startInfo = new ProcessStartInfo
     {
@@ -134,7 +137,7 @@ public class StorageChecker
 
     using var process = new Process { StartInfo = startInfo };
     using var timeout = new CancellationTokenSource(
-        TimeSpan.FromSeconds(5));
+        TimeSpan.FromSeconds(_options.CommandTimeoutSeconds));
 
     process.Start();
 

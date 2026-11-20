@@ -1,0 +1,196 @@
+@page "/backups"
+@model Monitor.Pages.BackupsModel
+@using Monitor.Features.Backups
+
+@{
+  Layout = "_Layout";
+  ViewData["Title"] = "DQ Monitor · Backups";
+  ViewData["BodyClass"] = "status-page";
+}
+
+<main class="status-shell">
+  <header class="status-header">
+    <div>
+      <a class="eyebrow" href="/">DreamQuest</a>
+      <h1>Backups</h1>
+    </div>
+
+    <div class="status-header-right">
+      @await Html.PartialAsync("_MainNav", "Backups")
+      <a href="/backups" class="nav-link">Refresh</a>
+    </div>
+  </header>
+
+  <section class="status-section">
+    <h2>Backup service</h2>
+
+    @{
+      var serviceStatusClass = Model.ServiceState switch
+      {
+        BackupServiceState.Idle => "ok-text",
+        BackupServiceState.Running => "warn-text",
+        BackupServiceState.Failed => "error-text",
+        _ => ""
+      };
+
+      var serviceStatusLabel = Model.ServiceState switch
+      {
+        BackupServiceState.Idle => "Idle",
+        BackupServiceState.Running => "Running",
+        BackupServiceState.Failed => "Failed",
+        _ => "Unknown"
+      };
+    }
+
+    <div class="status-row">
+      <strong>Storage backup service</strong>
+
+      <span class="inline-status @serviceStatusClass">
+        <span class="status-dot" aria-hidden="true"></span>
+        @serviceStatusLabel
+      </span>
+    </div>
+  </section>
+
+  <!-- Backup disk usage -->
+  <section class="status-section">
+    <h2>Backup disk</h2>
+
+    @if (Model.BackupStorage is null)
+    {
+      <p class="empty-state">Backup disk not configured.</p>
+    }
+    else
+    {
+      var disk = Model.BackupStorage;
+
+      var statusClass = disk.Status switch
+      {
+        "ok" => "ok-text",
+        "warn" => "warn-text",
+        "error" => "error-text",
+        _ => ""
+      };
+
+      <div class="status-row">
+        <strong>@disk.Label</strong>
+
+        <span class="inline-status @statusClass">
+          <span class="status-dot" aria-hidden="true"></span>
+          @disk.Message
+        </span>
+      </div>
+    }
+  </section>
+
+
+  <section class="status-section">
+    <h2>Backup executions</h2>
+
+    @if (Model.Executions.Length == 0)
+    {
+      <p class="empty-state">No execution history available.</p>
+    }
+    else
+    {
+      <div class="status-list">
+        @foreach (var execution in Model.Executions)
+        {
+          var statusClass = execution.Status switch
+          {
+            "success" => "ok-text",
+            "failed" => "error-text",
+            "running" => "warn-text",
+            _ => ""
+          };
+
+          var statusLabel = execution.Status switch
+          {
+            "success" => "Completed",
+            "failed" => "Failed",
+            "running" => "Running (unverified)",
+            _ => "Unknown"
+          };
+
+          var duration = execution.FinishedAt.HasValue
+            ? execution.FinishedAt.Value - execution.StartedAt
+            : (TimeSpan?)null;
+
+          var durationText = duration.HasValue
+            ? duration.Value.ToString(@"hh\:mm\:ss")
+            : "—";
+
+          <div class="status-row">
+            <div>
+              <strong>
+                @execution.StartedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+              </strong>
+
+              <div class="execution-details">
+                Duration: @durationText
+
+                @if (execution.ExitCode.HasValue &&
+                  execution.Status != "running")
+                {
+                  <span>
+                    · Exit code: @execution.ExitCode
+                  </span>
+                }
+              </div>
+            </div>
+
+            <span class="inline-status @statusClass">
+              <span class="status-dot" aria-hidden="true"></span>
+              @statusLabel
+            </span>
+          </div>
+
+          @if (Model.ExecutionLogs.TryGetValue(execution.Name, out var executionLog))
+          {
+            <details class="execution-log-details">
+              <summary>View log</summary>
+              <pre class="backup-log">@executionLog.Content</pre>
+            </details>
+          }
+
+        }
+      </div>
+    }
+  </section>
+
+  <!-- Snapshot history -->
+  <section class="status-section">
+    <h2>Storage snapshots</h2>
+
+    @if (Model.Snapshots.Length == 0)
+    {
+      <p class="empty-state">No snapshots available.</p>
+    }
+    else
+    {
+      <div class="status-list">
+        @foreach (var snapshot in Model.Snapshots)
+        {
+          <div class="status-row">
+            <strong>
+              @snapshot.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+            </strong>
+
+            <span class="inline-status @(snapshot.IsLatest ? "ok-text" : "")">
+              @if (snapshot.IsLatest)
+              {
+                <span class="status-dot" aria-hidden="true"></span>
+                <span>Latest successful</span>
+              }
+              else
+              {
+                <span>Previous snapshot</span>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+</main>
