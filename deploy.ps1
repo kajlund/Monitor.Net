@@ -1,55 +1,87 @@
+
 $ErrorActionPreference = 'Stop'
+
 $sshTarget = 'luka@dreamquest'
+$remoteRoot = '/opt/dreamquest/monitor-dotnet'
+$serviceName = 'monitor-dotnet.service'
+$statusUrl = 'http://127.0.0.1:50100/status'
 
 function Assert-Success($step) {
-    if ($LASTEXITCODE -ne 0) {
-        throw "$step failed (exit code $LASTEXITCODE)."
+  if ($LASTEXITCODE -ne 0) {
+    throw "$step failed (exit code $LASTEXITCODE)."
+  }
+}
+
+function Test-Deployment {
+  for ($attempt = 1; $attempt -le 10; $attempt++) {
+    $body = ssh $sshTarget "curl -fs --max-time 20 $statusUrl"
+    $exitCode = $LASTEXITCODE
+
+    if ($exitCode -eq 0 -and
+        ($body -join "`n") -match '<h1>\s*Server status\s*</h1>') {
+      return $true
     }
+
+    Start-Sleep -Seconds 1
+  }
+
+  return $false
 }
 
 $release = [Guid]::NewGuid().ToString('N')
 $publishDir = Join-Path ([System.IO.Path]::GetTempPath()) "monitor-$release"
-$remoteStage = "~/apps/monitor-dotnet-stage-$release"
+
+$remoteStage = "$remoteRoot/stage-$release"
+$remoteCurrent = "$remoteRoot/current"
+$remotePrevious = "$remoteRoot/previous"
 
 try {
-    $project = Join-Path $PSScriptRoot 'Monitor.csproj'
-    dotnet publish $project -c Release --self-contained false -o $publishDir
-    Assert-Success 'Publish'
+  Write-Host 'Publishing Monitor...'
 
-    ssh $sshTarget "mkdir -p $remoteStage"
-    Assert-Success 'Create staging directory'
+  $project = Join-Path $PSScriptRoot 'Monitor.csproj'
+  dotnet publish $project -c Release --self-contained false -o $publishDir
+  Assert-Success 'Publish'
 
-    scp -r "$publishDir/." "${sshTarget}:$remoteStage/"
-    Assert-Success 'Upload'
+  Write-Host 'Uploading release...'
 
-    ssh $sshTarget "test -f $remoteStage/Monitor.dll && mv ~/apps/monitor-dotnet ~/apps/monitor-dotnet-previous-$release && (mv $remoteStage ~/apps/monitor-dotnet || { mv ~/apps/monitor-dotnet-previous-$release ~/apps/monitor-dotnet && false; }) && sudo -n /usr/bin/systemctl restart monitor-dotnet.service"
-    Assert-Success 'Install and restart'
+  ssh $sshTarget "mkdir -p $remoteStage"
+  Assert-Success 'Create staging directory'
 
-    $verified = $false
+  scp -r "$publishDir/." "${sshTarget}:$remoteStage/"
+  Assert-Success 'Upload'
 
-    for ($attempt = 1; $attempt -le 10; $attempt++) {
-      $body = ssh $sshTarget 'curl -fs --max-time 20 http://127.0.0.1:50100/status'
-      $exitCode = $LASTEXITCODE
+  Write-Host 'Installing release...'
 
-      if ($exitCode -eq 0 -and ($body -join "`n") -match   '<h1>\s*Server status\s*</h1>') {
-        $verified = $true
-        break
-      }
+  ssh $sshTarget "chmod -R u=rwX,go=rX $remoteStage && test -f $remoteStage/Monitor.dll && rm -rf $remotePrevious && mv $remoteCurrent $remotePrevious && (mv $remoteStage $remoteCurrent || { mv $remotePrevious $remoteCurrent && false; })"
+  Assert-Success 'Install'
 
-      if ($attempt -lt 10) {
-          Start-Sleep -Seconds 1
-      }
+  Write-Host 'Restarting and verifying service...'
+
+  ssh $sshTarget "sudo -n /usr/bin/systemctl restart $serviceName"
+
+  $restartSucceeded = $LASTEXITCODE -eq 0
+
+  if (-not $restartSucceeded -or -not (Test-Deployment)) {
+    Write-Warning 'Deployment failed. Restoring previous version...'
+
+    ssh $sshTarget "test -f $remotePrevious/Monitor.dll && rm -rf $remoteCurrent && mv $remotePrevious $remoteCurrent && sudo -n /usr/bin/systemctl restart $serviceName"
+    Assert-Success 'Rollback'
+
+    if (-not (Test-Deployment)) {
+      throw 'Rollback verification failed. Check service logs.'
     }
 
-    if (-not $verified) {
-      throw 'Monitor did not return its status page on port 50100. Check journalctl -u monitor-dotnet.service on DreamQuest.'
-    }
+    throw 'Deployment failed. Previous version restored successfully.'
+  }
 
-    Write-Host 'Monitor deployed successfully.'
-    Write-Host "Previous version: ~/apps/monitor-dotnet-previous-$release"
+  Write-Host 'Monitor deployed successfully.' -ForegroundColor Green
+  Write-Host "Current version:  $remoteCurrent"
+  Write-Host "Previous version: $remotePrevious"
 }
 finally {
-    if (Test-Path $publishDir) {
-        Remove-Item -LiteralPath $publishDir -Recurse -Force
-    }
+  ssh $sshTarget "rm -rf $remoteStage"
+
+  if (Test-Path $publishDir) {
+    Remove-Item -LiteralPath $publishDir -Recurse -Force
+  }
 }
