@@ -42,6 +42,28 @@
       };
     }
 
+    @if (User.Identity?.IsAuthenticated == true &&
+     User.IsInRole("Administrator"))
+    {
+      <form method="post" asp-page-handler="Run" onsubmit="return confirm('Start a new storage backup?');">
+        <button type="submit" disabled="@(Model.ServiceState == BackupServiceState.Running)">
+          Run Backup
+        </button>
+      </form>
+    }
+    else
+    {
+      <p>
+        <a href="/login">Sign in as administrator</a>
+        to run a backup.
+      </p>
+    }
+
+    @if (TempData["BackupMessage"] is string message)
+    {
+      <p role="status">@message</p>
+    }
+
     <div class="status-row">
       <strong>Storage backup service</strong>
 

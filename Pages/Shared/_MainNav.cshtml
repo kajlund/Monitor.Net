@@ -14,4 +14,15 @@
      aria-current="@(Model == "Backups" ? "page" : null)">
     Backups
   </a>
+  @if (User.Identity?.IsAuthenticated == true)
+  {
+    <form method="post" action="/logout">
+      @Html.AntiForgeryToken()
+      <button type="submit" class="nav-link">Sign out</button>
+    </form>
+  }
+  else
+  {
+    <a href="/login" class="nav-link">Admin login</a>
+  }
 </nav>

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
 using Monitor.Features.Backups;
@@ -43,5 +44,34 @@ public class BackupsModel(
       }
     }
 
+  }
+
+  public async Task<IActionResult> OnPostRunAsync()
+  {
+    if (User.Identity?.IsAuthenticated != true ||
+        !User.IsInRole("Administrator"))
+    {
+      return Challenge();
+    }
+
+    var state = await backupRunner.GetStateAsync();
+
+    if (state != BackupServiceState.Idle)
+    {
+      TempData["BackupMessage"] = state switch
+      {
+        BackupServiceState.Running => "A backup is already running.",
+        BackupServiceState.Failed => "Backup service is in a failed state.",
+        _ => "Backup service state could not be verified."
+      };
+
+      return RedirectToPage();
+    }
+
+    var result = await backupRunner.StartAsync();
+
+    TempData["BackupMessage"] = result.Message;
+
+    return RedirectToPage();
   }
 }

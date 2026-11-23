@@ -48,8 +48,18 @@ public class BackupRunner(
       }
       catch (OperationCanceledException)
       {
+        if (!process.HasExited)
+        {
+          process.Kill(entireProcessTree: true);
+          await process.WaitForExitAsync();
+        }
+
+        logger.LogWarning(
+          "Timed out requesting backup service start.");
+
         return new BackupStartResult(
-          false, "Backup request timed out");
+          false,
+          "Backup start request timed out. Check service status before retrying.");
       }
 
       await Task.WhenAll(output, errors);

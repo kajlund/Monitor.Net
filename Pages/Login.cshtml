@@ -1,0 +1,39 @@
+@page "/login"
+@model Monitor.Pages.LoginModel
+
+@{
+  Layout = "_Layout";
+  ViewData["Title"] = "DQ Monitor · Login";
+}
+
+<main class="login-shell">
+  <header class="login-header">
+    <a class="eyebrow" href="/">DreamQuest</a>
+    <h1>Administrator login</h1>
+  </header>
+
+  <form method="post" class="login-card">
+    @Html.AntiForgeryToken()
+
+    <div class="form-field">
+      <label asp-for="Username">Username</label>
+      <input asp-for="Username" class="form-input" autocomplete="username" />
+    </div>
+
+    <div class="form-field">
+      <label asp-for="Password">Password</label>
+      <input asp-for="Password" class="form-input" type="password" autocomplete="current-password" />
+    </div>
+
+    @if (Model.ErrorMessage is not null)
+    {
+      <p class="form-error" role="alert">
+        @Model.ErrorMessage
+      </p>
+    }
+
+    <button type="submit" class="action-button">
+      Sign in
+    </button>
+  </form>
+</main>
